@@ -1,1 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duck Sniper: Quack Attack!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #1a4a2e, #2d5a3d);
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                #87CEEB 0%, 
+                #98FB98 30%, 
+                #228B22 100%);
+            transition: all 0.3s ease;
+        }
+        
+        /* Forest Background */
+        .tree {
+            position: absolute;
+            bottom: 0;
+            background: #2d5a3d;
+            border-radius: 50% 50% 0 0;
+            opacity: 0.8;
+        }
+        
+        .tree1 { width: 60px; height: 120px; left: 10%; }
+        .tree2 { width: 80px; height: 150px; left: 20%; }
+        .tree3 { width: 70px; height: 130px; right: 15%; }
+        .tree4 { width: 90px; height: 160px; right: 5%; }
+        
+        /* Clouds */
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.7;
+            animation: float 8s infinite ease-in-out;
+        }
+        
+        .cloud1 { width: 80px; height: 40px; top: 10%; left: 10%; animation-delay: 0s; }
+        .cloud2 { width: 60px; height: 30px; top: 15%; right: 20%; animation-delay: 2s; }
+        .cloud3 { width: 100px; height: 50px; top: 5%; left: 60%; animation-delay: 4s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Duck Styles */
+        .duck {
+            position: absolute;
+            width: 50px;
+            height: 40px;
+            background: #FFD700;
+            border-radius: 50%;
+            cursor: crosshair;
+            transition: all 0.1s ease;
+            z-index: 10;
+        }
+        
+        .duck::before {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 10px;
+            background: #FFA500;
+            border-radius: 50%;
+            top: 12px;
+            left: -5px;
+        }
+        
+        .duck::after {
+            content: '👁️';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 12px;
+        }
+        
+        .duck.golden {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            box-shadow: 0 0 20px #FFD700;
+            animation: sparkle 1s infinite;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid red;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: red;
+        }
+        
+        #crosshair::before {
+            width: 2px;
+            height: 40px;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+        
+        #crosshair::after {
+            width: 40px;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        
+        /* Zoom Effect */
+        .zoomed {
+            transform: scale(1.5);
+            filter: blur(1px);
+        }
+        
+        /* UI Elements */
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #scoreBoard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        #gameControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: all;
+        }
+        
+        .control-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 15px 20px;
+            border-radius: 25px;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: white;
+            transform: scale(1.05);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Game Messages */
+        #gameMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #gameMessage h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        
+        #gameMessage button {
+            background: #FFD700;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+        
+        #gameMessage button:hover {
+            background: #FFA500;
+        }
+        
+        /* Hit Effects */
+        .hit-effect {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: red;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 50;
+            animation: hitEffect 0.5s ease-out forwards;
+        }
+        
+        @keyframes hitEffect {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        /* Frenzy Mode */
+        .frenzy-mode {
+            animation: frenzyPulse 0.5s infinite;
+        }
+        
+        @keyframes frenzyPulse {
+            0%, 100% { background: linear-gradient(135deg, #1a4a2e, #2d5a3d); }
+            50% { background: linear-gradient(135deg, #ff4444, #ff6666); }
+        }
+        
+        /* Sound indicator */
+        .sound-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            display: none;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #scoreBoard {
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            .control-btn {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            
+            .duck {
+                width: 40px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameArea">
+            <!-- Forest Background -->
+            <div class="tree tree1"></div>
+            <div class="tree tree2"></div>
+            <div class="tree tree3"></div>
+            <div class="tree tree4"></div>
+            
+            <!-- Clouds -->
+            <div class="cloud cloud1"></div>
+            <div class="cloud cloud2"></div>
+            <div class="cloud cloud3"></div>
+            
+            <!-- Crosshair -->
+            <div id="crosshair"></div>
+        </div>
+        
+        <!-- UI Elements -->
+        <div id="ui">
+            <div id="scoreBoard">
+                <div>Score: <span id="score">0</span></div>
+                <div>Lives: <span id="lives">3</span></div>
+                <div>Wave: <span id="wave">1</span></div>
+                <div>Combo: <span id="combo">0</span></div>
+            </div>
+            
+            <div id="gameControls">
+                <button class="control-btn" onclick="startGame()">Start Game</button>
+                <button class="control-btn" onclick="pauseGame()">Pause</button>
+                <button class="control-btn" onclick="resetGame()">Reset</button>
+            </div>
+            
+            <div class="sound-indicator" id="soundIndicator">🔊 Shot Fired!</div>
+        </div>
+        
+        <!-- Game Messages -->
+        <div id="gameMessage">
+            <h2 id="messageTitle">Duck Sniper: Quack Attack!</h2>
+            <div id="messageContent">
+                <p>Welcome to Duck Sniper!</p>
+                <p>🎯 Tap to aim and shoot</p>
+                <p>🦆 Avoid golden ducks - they're lucky!</p>
+                <p>💀 Headshots = +3 points</p>
+                <p>🎯 Body shots = +1 point</p>
+                <p>❌ Misses = -1 point</p>
+                <p>🔥 3 hits in a row = Frenzy Mode!</p>
+            </div>
+            <button onclick="startGame()">Start Hunting!</button>
+        </div>
+    </div>
 
+    <script>
+        class DuckSniperGame {
+            constructor() {
+                this.gameArea = document.getElementById('gameArea');
+                this.crosshair = document.getElementById('crosshair');
+                this.scoreElement = document.getElementById('score');
+                this.livesElement = document.getElementById('lives');
+                this.waveElement = document.getElementById('wave');
+                this.comboElement = document.getElementById('combo');
+                this.gameMessage = document.getElementById('gameMessage');
+                this.soundIndicator = document.getElementById('soundIndicator');
+                
+                this.score = 0;
+                this.lives = 3;
+                this.wave = 1;
+                this.combo = 0;
+                this.ducks = [];
+                this.isGameRunning = false;
+                this.isPaused = false;
+                this.frenzyMode = false;
+                this.frenzyTimer = 0;
+                this.isZooming = false;
+                this.spawnRate = 2000;
+                this.duckSpeed = 2;
+                
+                this.init();
+            }
+            
+            init() {
+                this.gameMessage.style.display = 'block';
+                this.setupEventListeners();
+                this.gameLoop();
+            }
+            
+            setupEventListeners() {
+                // Mouse/Touch controls
+                this.gameArea.addEventListener('mousedown', (e) => this.startZoom(e));
+                this.gameArea.addEventListener('mouseup', (e) => this.shoot(e));
+                this.gameArea.addEventListener('mousemove', (e) => this.updateCrosshair(e));
+                
+                // Touch controls
+                this.gameArea.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.startZoom(e.touches[0]);
+                });
+                this.gameArea.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.shoot(e.changedTouches[0]);
+                });
+                this.gameArea.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    this.updateCrosshair(e.touches[0]);
+                });
+                
+                // Prevent context menu
+                this.gameArea.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+            
+            updateCrosshair(e) {
+                if (!this.isGameRunning || this.isPaused) return;
+                
+                const rect = this.gameArea.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                this.crosshair.style.left = (x - 20) + 'px';
+                this.crosshair.style.top = (y - 20) + 'px';
+                this.crosshair.style.display = 'block';
+            }
+            
+            startZoom(e) {
+                if (!this.isGameRunning || this.isPaused) return;
+                
+                this.isZooming = true;
+                this.gameArea.classList.add('zoomed');
+                
+                // Zoom timeout
+                setTimeout(() => {
+                    if (this.isZooming) {
+                        this.gameArea.classList.remove('zoomed');
+                        this.isZooming = false;
+                    }
+                }, 2000);
+            }
+            
+            shoot(e) {
+                if (!this.isGameRunning || this.isPaused) return;
+                
+                this.isZooming = false;
+                this.gameArea.classList.remove('zoomed');
+                
+                const rect = this.gameArea.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                this.showSoundIndicator();
+                this.createHitEffect(x, y);
+                
+                // Check for duck hits
+                let hit = false;
+                this.ducks.forEach((duck, index) => {
+                    if (this.checkHit(x, y, duck)) {
+                        hit = true;
+                        this.hitDuck(duck, index);
+                    }
+                });
+                
+                if (!hit) {
+                    this.miss();
+                }
+            }
+            
+            checkHit(x, y, duck) {
+                const duckRect = duck.element.getBoundingClientRect();
+                const gameRect = this.gameArea.getBoundingClientRect();
+                
+                const duckX = duckRect.left - gameRect.left + duckRect.width / 2;
+                const duckY = duckRect.top - gameRect.top + duckRect.height / 2;
+                
+                const distance = Math.sqrt(Math.pow(x - duckX, 2) + Math.pow(y - duckY, 2));
+                return distance < 30;
+            }
+            
+            hitDuck(duck, index) {
+                if (duck.isGolden) {
+                    // Golden duck hit - lose life
+                    this.lives--;
+                    this.combo = 0;
+                    this.showMessage("Golden Duck Hit!", "You lost a life! Golden ducks are lucky - don't shoot them!", 2000);
+                } else {
+                    // Regular duck hit
+                    const isHeadshot = Math.random() < 0.3; // 30% chance for headshot
+                    const points = isHeadshot ? 3 : 1;
+                    this.score += points;
+                    this.combo++;
+                    
+                    if (isHeadshot) {
+                        this.showMessage("HEADSHOT!", `+${points} points!`, 1000);
+                    }
+                    
+                    // Check for frenzy mode
+                    if (this.combo >= 3 && !this.frenzyMode) {
+                        this.activateFrenzyMode();
+                    }
+                }
+                
+                // Remove duck
+                duck.element.remove();
+                this.ducks.splice(index, 1);
+                
+                this.updateUI();
+                this.checkGameOver();
+            }
+            
+            miss() {
+                this.score = Math.max(0, this.score - 1);
+                this.combo = 0;
+                this.updateUI();
+                this.showMessage("Miss!", "-1 point", 1000);
+            }
+            
+            activateFrenzyMode() {
+                this.frenzyMode = true;
+                this.frenzyTimer = 5000; // 5 seconds
+                this.gameArea.classList.add('frenzy-mode');
+                this.showMessage("FRENZY MODE!", "Auto-fire activated for 5 seconds!", 2000);
+                
+                // Auto-fire during frenzy
+                const frenzyInterval = setInterval(() => {
+                    if (!this.frenzyMode || !this.isGameRunning || this.isPaused) {
+                        clearInterval(frenzyInterval);
+                        return;
+                    }
+                    
+                    // Auto-shoot at random duck
+                    if (this.ducks.length > 0) {
+                        const randomDuck = this.ducks[Math.floor(Math.random() * this.ducks.length)];
+                        const duckRect = randomDuck.element.getBoundingClientRect();
+                        const gameRect = this.gameArea.getBoundingClientRect();
+                        
+                        const x = duckRect.left - gameRect.left + duckRect.width / 2;
+                        const y = duckRect.top - gameRect.top + duckRect.height / 2;
+                        
+                        this.createHitEffect(x, y);
+                        this.hitDuck(randomDuck, this.ducks.indexOf(randomDuck));
+                    }
+                }, 500);
+            }
+            
+            spawnDuck() {
+                if (!this.isGameRunning || this.isPaused) return;
+                
+                const duck = document.createElement('div');
+                duck.className = 'duck';
+                
+                // 10% chance for golden duck
+                const isGolden = Math.random() < 0.1;
+                if (isGolden) {
+                    duck.classList.add('golden');
+                }
+                
+                // Random spawn position
+                const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+                let x, y, vx, vy;
+                
+                switch (side) {
+                    case 0: // top
+                        x = Math.random() * window.innerWidth;
+                        y = -50;
+                        vx = (Math.random() - 0.5) * this.duckSpeed;
+                        vy = this.duckSpeed;
+                        break;
+                    case 1: // right
+                        x = window.innerWidth + 50;
+                        y = Math.random() * window.innerHeight;
+                        vx = -this.duckSpeed;
+                        vy = (Math.random() - 0.5) * this.duckSpeed;
+                        break;
+                    case 2: // bottom
+                        x = Math.random() * window.innerWidth;
+                        y = window.innerHeight + 50;
+                        vx = (Math.random() - 0.5) * this.duckSpeed;
+                        vy = -this.duckSpeed;
+                        break;
+                    case 3: // left
+                        x = -50;
+                        y = Math.random() * window.innerHeight;
+                        vx = this.duckSpeed;
+                        vy = (Math.random() - 0.5) * this.duckSpeed;
+                        break;
+                }
+                
+                duck.style.left = x + 'px';
+                duck.style.top = y + 'px';
+                
+                this.gameArea.appendChild(duck);
+                
+                this.ducks.push({
+                    element: duck,
+                    x: x,
+                    y: y,
+                    vx: vx,
+                    vy: vy,
+                    isGolden: isGolden
+                });
+            }
+            
+            updateDucks() {
+                this.ducks.forEach((duck, index) => {
+                    duck.x += duck.vx;
+                    duck.y += duck.vy;
+                    
+                    duck.element.style.left = duck.x + 'px';
+                    duck.element.style.top = duck.y + 'px';
+                    
+                    // Remove ducks that go off screen
+                    if (duck.x < -100 || duck.x > window.innerWidth + 100 || 
+                        duck.y < -100 || duck.y > window.innerHeight + 100) {
+                        duck.element.remove();
+                        this.ducks.splice(index, 1);
+                    }
+                });
+            }
+            
+            createHitEffect(x, y) {
+                const effect = document.createElement('div');
+                effect.className = 'hit-effect';
+                effect.style.left = (x - 15) + 'px';
+                effect.style.top = (y - 15) + 'px';
+                
+                this.gameArea.appendChild(effect);
+                
+                setTimeout(() => {
+                    effect.remove();
+                }, 500);
+            }
+            
+            showSoundIndicator() {
+                this.soundIndicator.style.display = 'block';
+                setTimeout(() => {
+                    this.soundIndicator.style.display = 'none';
+                }, 500);
+            }
+            
+            showMessage(title, content, duration = 2000) {
+                const messageDiv = document.createElement('div');
+                messageDiv.style.cssText = `
+                    position: absolute;
+                    top: 120px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    z-index: 500;
+                    text-align: center;
+                    font-size: 18px;
+                `;
+                messageDiv.innerHTML = `<div style="color: #FFD700; font-size: 20px;">${title}</div><div>${content}</div>`;
+                
+                this.gameArea.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, duration);
+            }
+            
+            updateUI() {
+                this.scoreElement.textContent = this.score;
+                this.livesElement.textContent = this.lives;
+                this.waveElement.textContent = this.wave;
+                this.comboElement.textContent = this.combo;
+            }
+            
+            checkGameOver() {
+                if (this.lives <= 0) {
+                    this.endGame();
+                }
+            }
+            
+            endGame() {
+                this.isGameRunning = false;
+                this.gameMessage.style.display = 'block';
+                document.getElementById('messageTitle').textContent = 'Game Over!';
+                document.getElementById('messageContent').innerHTML = `
+                    <p>Final Score: ${this.score}</p>
+                    <p>Wave Reached: ${this.wave}</p>
+                    <p>Max Combo: ${this.combo}</p>
+                    <p>Thanks for playing Duck Sniper!</p>
+                `;
+                
+                // Clear all ducks
+                this.ducks.forEach(duck => duck.element.remove());
+                this.ducks = [];
+            }
+            
+            gameLoop() {
+                if (this.isGameRunning && !this.isPaused) {
+                    this.updateDucks();
+                    
+                    // Update frenzy mode
+                    if (this.frenzyMode) {
+                        this.frenzyTimer -= 16;
+                        if (this.frenzyTimer <= 0) {
+                            this.frenzyMode = false;
+                            this.gameArea.classList.remove('frenzy-mode');
+                            this.combo = 0;
+                        }
+                    }
+                    
+                    // Spawn ducks
+                    if (Math.random() < 0.02) { // 2% chance per frame
+                        this.spawnDuck();
+                    }
+                    
+                    // Increase difficulty
+                    if (this.score > 0 && this.score % 20 === 0) {
+                        this.wave = Math.floor(this.score / 20) + 1;
+                        this.duckSpeed = Math.min(5, 2 + this.wave * 0.5);
+                    }
+                }
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        // Game instance
+        let game;
+        
+        function startGame() {
+            if (!game) {
+                game = new DuckSniperGame();
+            }
+            
+            game.isGameRunning = true;
+            game.isPaused = false;
+            game.gameMessage.style.display = 'none';
+            
+            // Reset game state
+            game.score = 0;
+            game.lives = 3;
+            game.wave = 1;
+            game.combo = 0;
+            game.frenzyMode = false;
+            game.duckSpeed = 2;
+            
+            // Clear existing ducks
+            game.ducks.forEach(duck => duck.element.remove());
+            game.ducks = [];
+            
+            game.updateUI();
+        }
+        
+        function pauseGame() {
+            if (game) {
+                game.isPaused = !game.isPaused;
+            }
+        }
+        
+        function resetGame() {
+            if (game) {
+                game.isGameRunning = false;
+                game.isPaused = false;
+                game.gameMessage.style.display = 'block';
+                game.crosshair.style.display = 'none';
+                
+                // Reset UI
+                document.getElementById('messageTitle').textContent = 'Duck Sniper: Quack Attack!';
+                document.getElementById('messageContent').innerHTML = `
+                    <p>Welcome to Duck Sniper!</p>
+                    <p>🎯 Tap to aim and shoot</p>
+                    <p>🦆 Avoid golden ducks - they're lucky!</p>
+                    <p>💀 Headshots = +3 points</p>
+                    <p>🎯 Body shots = +1 point</p>
+                    <p>❌ Misses = -1 point</p>
+                    <p>🔥 3 hits in a row = Frenzy Mode!</p>
+                `;
+                
+                // Clear all ducks
+                game.ducks.forEach(duck => duck.element.remove());
+                game.ducks = [];
+                
+                // Reset game state
+                game.score = 0;
+                game.lives = 3;
+                game.wave = 1;
+                game.combo = 0;
+                game.updateUI();
+            }
+        }
+        
+        // Initialize game on load
+        document.addEventListener('DOMContentLoaded', () => {
+            game = new DuckSniperGame();
+        });
+    </script>
+</body>
+</html>
